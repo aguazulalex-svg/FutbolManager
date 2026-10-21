@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "59274529036",
+    "project_id": "futbolmanager-f2757",
+    "storage_bucket": "futbolmanager-f2757.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:59274529036:android:f5c796ef2675482a5ba129",
+        "android_client_info": {
+          "package_name": "com.example.futbol_manager"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "59274529036-48o66oi56os0c895lv52s165ue8t31g2.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.futbol_manager",
+            "certificate_hash": "a1059d78907ec1215735dc3f56c594288131bdd9"
+          }
+        },
+        {
+          "client_id": "59274529036-oo1tbid4js7l2vissh3etuj9490f74lp.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA7SQ--vcFQSfGsBy3xQKzACPIozRZ0NXo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "59274529036-oo1tbid4js7l2vissh3etuj9490f74lp.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "59274529036-g0136ad1l9gvtbt9krc5f8nhfrk8s69g.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.futbolManager"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
