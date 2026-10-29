@@ -77,7 +77,11 @@ class GoleadoresScreen extends StatelessWidget {
                         itemBuilder: (context, index) {
                           final goleador = goleadores[index];
 
-                          final nombre = goleador['jugadorNombre'] as String;
+                          final nombre =
+                              (goleador['jugadorNombre'] ??
+                                      goleador['nombre'] ??
+                                      'Jugador sin nombre')
+                                  .toString();
 
                           final equipo = goleador['equipoNombre'] as String;
 

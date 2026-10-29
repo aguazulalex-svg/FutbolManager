@@ -7,6 +7,7 @@ import '../models/posicion.dart';
 import '../services/equipo_service.dart';
 import '../services/partido_service.dart';
 import '../services/posicion_service.dart';
+import '../utils/pdf_posiciones.dart';
 
 class PosicionesScreen extends StatelessWidget {
   const PosicionesScreen({super.key});
@@ -50,6 +51,22 @@ class PosicionesScreen extends StatelessWidget {
               final List<Posicion> posiciones = posicionService
                   .calcularPosiciones(equipos: equipos, partidos: partidos);
 
+              // Generar y compartir el PDF de la tabla.
+              Future<void> descargarPDF() async {
+                try {
+                  await PdfPosiciones.generarYCompartir(posiciones: posiciones);
+                } catch (e) {
+                  if (!context.mounted) return;
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('No se pudo generar el PDF: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+
               if (posiciones.isEmpty) {
                 return const Center(
                   child: Text('Todavía no hay equipos registrados.'),
@@ -58,6 +75,7 @@ class PosicionesScreen extends StatelessWidget {
 
               return Column(
                 children: [
+                  // Encabezado de la clasificación.
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(20),
@@ -84,6 +102,25 @@ class PosicionesScreen extends StatelessWidget {
                     ),
                   ),
 
+                  // Botón para generar el PDF.
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: descargarPDF,
+                        icon: const Icon(Icons.picture_as_pdf),
+                        label: const Text('Descargar tabla en PDF'),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFF146B3A),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.all(14),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Tabla de posiciones.
                   Expanded(
                     child: SingleChildScrollView(
                       padding: const EdgeInsets.all(12),
@@ -127,7 +164,6 @@ class PosicionesScreen extends StatelessWidget {
                                     ),
                                   ),
                                 ),
-
                                 DataCell(
                                   SizedBox(
                                     width: 150,
@@ -142,19 +178,12 @@ class PosicionesScreen extends StatelessWidget {
                                     ),
                                   ),
                                 ),
-
                                 DataCell(Text('${posicion.partidosJugados}')),
-
                                 DataCell(Text('${posicion.partidosGanados}')),
-
                                 DataCell(Text('${posicion.partidosEmpatados}')),
-
                                 DataCell(Text('${posicion.partidosPerdidos}')),
-
                                 DataCell(Text('${posicion.golesFavor}')),
-
                                 DataCell(Text('${posicion.golesContra}')),
-
                                 DataCell(
                                   Text(
                                     posicion.diferenciaGoles > 0
@@ -162,7 +191,6 @@ class PosicionesScreen extends StatelessWidget {
                                         : '${posicion.diferenciaGoles}',
                                   ),
                                 ),
-
                                 DataCell(
                                   Text(
                                     '${posicion.puntos}',
@@ -180,6 +208,7 @@ class PosicionesScreen extends StatelessWidget {
                     ),
                   ),
 
+                  // Significado de las estadísticas.
                   const Padding(
                     padding: EdgeInsets.all(12),
                     child: Text(

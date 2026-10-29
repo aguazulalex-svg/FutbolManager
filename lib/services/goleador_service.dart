@@ -27,14 +27,33 @@ class GoleadorService {
           continue;
         }
 
+        // Obtener el nombre, admitiendo ambas claves.
+        final nombreJugador =
+            (goleador['jugadorNombre'] ??
+                    goleador['nombre'] ??
+                    'Jugador sin nombre')
+                .toString();
+
+        final nombreEquipo =
+            goleador['equipoNombre']?.toString() ?? 'Equipo sin nombre';
+
         if (!acumulado.containsKey(jugadorId)) {
           acumulado[jugadorId] = {
             'jugadorId': jugadorId,
-            'jugadorNombre': goleador['jugadorNombre']?.toString() ?? '',
+            'jugadorNombre': nombreJugador,
             'equipoId': equipoId,
-            'equipoNombre': goleador['equipoNombre']?.toString() ?? '',
+            'equipoNombre': nombreEquipo,
             'goles': 0,
           };
+        } else {
+          // Si el registro anterior no tenía nombre, recuperar el actual.
+          final nombreGuardado =
+              acumulado[jugadorId]!['jugadorNombre']?.toString() ?? '';
+
+          if (nombreGuardado.isEmpty ||
+              nombreGuardado == 'Jugador sin nombre') {
+            acumulado[jugadorId]!['jugadorNombre'] = nombreJugador;
+          }
         }
 
         // Acumular los goles del jugador.

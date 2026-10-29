@@ -53,7 +53,7 @@ class _JugadoresScreenState extends State<JugadoresScreen> {
         numero > 99 ||
         edad == null ||
         edad < 1 ||
-        edad > 100 ||
+        edad > 50 ||
         _equipoSeleccionado == null ||
         _posicionSeleccionada == null) {
       ScaffoldMessenger.of(context).showSnackBar(

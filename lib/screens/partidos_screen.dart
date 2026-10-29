@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../models/equipo.dart';
 import '../models/partido.dart';
+import '../models/jugador.dart';
 import '../services/equipo_service.dart';
 import '../services/partido_service.dart';
+import '../services/jugador_service.dart';
 
 class PartidosScreen extends StatefulWidget {
   const PartidosScreen({super.key});
@@ -15,6 +17,7 @@ class PartidosScreen extends StatefulWidget {
 class _PartidosScreenState extends State<PartidosScreen> {
   final EquipoService _equipoService = EquipoService();
   final PartidoService _partidoService = PartidoService();
+  final JugadorService _jugadorService = JugadorService();
 
   String? _equipoLocalId;
   String? _equipoVisitanteId;
@@ -133,92 +136,218 @@ class _PartidosScreenState extends State<PartidosScreen> {
 
     String estadoSeleccionado = partido.estado;
 
+    // Consultamos los jugadores de ambos equipos.
+    List<Jugador> jugadoresLocal = [];
+    List<Jugador> jugadoresVisitante = [];
+
+    try {
+      jugadoresLocal = await _jugadorService
+          .obtenerJugadoresPorEquipo(partido.equipoLocalId)
+          .first;
+
+      jugadoresVisitante = await _jugadorService
+          .obtenerJugadoresPorEquipo(partido.equipoVisitanteId)
+          .first;
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('No se pudieron cargar los jugadores: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      golesLocalController.dispose();
+      golesVisitanteController.dispose();
+      return;
+    }
+
+    // Guardamos los goles de cada jugador por su ID.
+    final Map<String, int> golesPorJugador = {};
+
+    // Recuperamos los goleadores anteriores si estamos editando
+    // un partido que ya tiene información guardada.
+    for (final goleador in partido.goleadores) {
+      final jugadorId = goleador['jugadorId']?.toString() ?? '';
+      final goles = (goleador['goles'] as num?)?.toInt() ?? 0;
+
+      if (jugadorId.isNotEmpty && goles > 0) {
+        golesPorJugador[jugadorId] = goles;
+      }
+    }
+
+    final Map<String, TextEditingController> controlesGoles = {};
+
+    TextEditingController controlDeGoles(String jugadorId) {
+      return controlesGoles.putIfAbsent(
+        jugadorId,
+        () => TextEditingController(text: '${golesPorJugador[jugadorId] ?? 0}'),
+      );
+    }
+
     final resultado = await showDialog<Map<String, dynamic>>(
       context: context,
       builder: (dialogContext) {
         return StatefulBuilder(
           builder: (context, actualizarDialogo) {
-            return AlertDialog(
-              title: const Text('Registrar resultado'),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      '${partido.equipoLocalNombre} '
-                      'vs. ${partido.equipoVisitanteNombre}',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
+            Widget construirListaJugadores(List<Jugador> jugadores) {
+              if (jugadores.isEmpty) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8),
+                  child: Text(
+                    'Este equipo todavía no tiene jugadores registrados.',
+                  ),
+                );
+              }
 
-                    const SizedBox(height: 20),
+              return Column(
+                children: jugadores.map((jugador) {
+                  final controller = controlDeGoles(jugador.id);
 
-                    Row(
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(
                       children: [
                         Expanded(
-                          child: TextField(
-                            controller: golesLocalController,
-                            keyboardType: TextInputType.number,
-                            textAlign: TextAlign.center,
-                            decoration: InputDecoration(
-                              labelText: 'Local',
-                              border: const OutlineInputBorder(),
-                              helperText: partido.equipoLocalNombre,
-                            ),
+                          child: Text(
+                            '#${jugador.numeroCamiseta} ${jugador.nombre}',
                           ),
                         ),
-
-                        const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 12),
-                          child: Text('-', style: TextStyle(fontSize: 24)),
-                        ),
-
-                        Expanded(
+                        SizedBox(
+                          width: 75,
                           child: TextField(
-                            controller: golesVisitanteController,
+                            controller: controller,
                             keyboardType: TextInputType.number,
                             textAlign: TextAlign.center,
-                            decoration: InputDecoration(
-                              labelText: 'Visitante',
-                              border: const OutlineInputBorder(),
-                              helperText: partido.equipoVisitanteNombre,
+                            decoration: const InputDecoration(
+                              labelText: 'Goles',
+                              border: OutlineInputBorder(),
+                              isDense: true,
                             ),
+                            onChanged: (valor) {
+                              final cantidad = int.tryParse(valor);
+                              actualizarDialogo(() {
+                                if (cantidad != null && cantidad >= 0) {
+                                  golesPorJugador[jugador.id] = cantidad;
+                                } else {
+                                  golesPorJugador.remove(jugador.id);
+                                }
+                              });
+                            },
                           ),
                         ),
                       ],
                     ),
+                  );
+                }).toList(),
+              );
+            }
 
-                    const SizedBox(height: 20),
-
-                    DropdownButtonFormField<String>(
-                      value: estadoSeleccionado,
-                      decoration: const InputDecoration(
-                        labelText: 'Estado del partido',
-                        border: OutlineInputBorder(),
+            return AlertDialog(
+              title: const Text('Registrar resultado y goleadores'),
+              content: SingleChildScrollView(
+                child: SizedBox(
+                  width: 420,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${partido.equipoLocalNombre} vs. '
+                        '${partido.equipoVisitanteNombre}',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
                       ),
-                      items: const [
-                        DropdownMenuItem(
-                          value: 'Programado',
-                          child: Text('Programado'),
+                      const SizedBox(height: 20),
+
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: golesLocalController,
+                              keyboardType: TextInputType.number,
+                              textAlign: TextAlign.center,
+                              decoration: InputDecoration(
+                                labelText: 'Goles local',
+                                border: const OutlineInputBorder(),
+                                helperText: partido.equipoLocalNombre,
+                              ),
+                            ),
+                          ),
+                          const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 12),
+                            child: Text('-', style: TextStyle(fontSize: 24)),
+                          ),
+                          Expanded(
+                            child: TextField(
+                              controller: golesVisitanteController,
+                              keyboardType: TextInputType.number,
+                              textAlign: TextAlign.center,
+                              decoration: InputDecoration(
+                                labelText: 'Goles visitante',
+                                border: const OutlineInputBorder(),
+                                helperText: partido.equipoVisitanteNombre,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      DropdownButtonFormField<String>(
+                        initialValue: estadoSeleccionado,
+                        decoration: const InputDecoration(
+                          labelText: 'Estado del partido',
+                          border: OutlineInputBorder(),
                         ),
-                        DropdownMenuItem(
-                          value: 'En juego',
-                          child: Text('En juego'),
+                        items: const [
+                          DropdownMenuItem(
+                            value: 'Programado',
+                            child: Text('Programado'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'En juego',
+                            child: Text('En juego'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'Finalizado',
+                            child: Text('Finalizado'),
+                          ),
+                        ],
+                        onChanged: (valor) {
+                          if (valor != null) {
+                            actualizarDialogo(() {
+                              estadoSeleccionado = valor;
+                            });
+                          }
+                        },
+                      ),
+
+                      const SizedBox(height: 24),
+                      const Text(
+                        'Goleadores del equipo local',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
                         ),
-                        DropdownMenuItem(
-                          value: 'Finalizado',
-                          child: Text('Finalizado'),
+                      ),
+                      construirListaJugadores(jugadoresLocal),
+
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Goleadores del equipo visitante',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
                         ),
-                      ],
-                      onChanged: (valor) {
-                        if (valor != null) {
-                          actualizarDialogo(() {
-                            estadoSeleccionado = valor;
-                          });
-                        }
-                      },
-                    ),
-                  ],
+                      ),
+                      construirListaJugadores(jugadoresVisitante),
+                    ],
+                  ),
                 ),
               ),
               actions: [
@@ -245,17 +374,98 @@ class _PartidosScreenState extends State<PartidosScreen> {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                           content: Text(
-                            'Introduce goles válidos, iguales o mayores que cero.',
+                            'Introduce un marcador válido, con goles iguales o mayores que cero.',
                           ),
                         ),
                       );
                       return;
                     }
 
+                    // Validamos que todos los campos de goles sean enteros
+                    // no negativos y sumamos los goles por equipo.
+                    int totalLocal = 0;
+                    int totalVisitante = 0;
+
+                    for (final jugador in jugadoresLocal) {
+                      final valor = int.tryParse(
+                        controlDeGoles(jugador.id).text.trim(),
+                      );
+
+                      if (valor == null || valor < 0) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Revisa los goles de los jugadores del equipo local.',
+                            ),
+                          ),
+                        );
+                        return;
+                      }
+
+                      golesPorJugador[jugador.id] = valor;
+                      totalLocal += valor;
+                    }
+
+                    for (final jugador in jugadoresVisitante) {
+                      final valor = int.tryParse(
+                        controlDeGoles(jugador.id).text.trim(),
+                      );
+
+                      if (valor == null || valor < 0) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Revisa los goles de los jugadores del equipo visitante.',
+                            ),
+                          ),
+                        );
+                        return;
+                      }
+
+                      golesPorJugador[jugador.id] = valor;
+                      totalVisitante += valor;
+                    }
+
+                    // Solo exigimos coincidencia cuando se finaliza el partido.
+                    if (estadoSeleccionado == 'Finalizado' &&
+                        (totalLocal != golesLocal ||
+                            totalVisitante != golesVisitante)) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Los goles individuales deben coincidir con el marcador. '
+                            'Local: $totalLocal/$golesLocal. '
+                            'Visitante: $totalVisitante/$golesVisitante.',
+                          ),
+                        ),
+                      );
+                      return;
+                    }
+
+                    final List<Map<String, dynamic>> goleadores = [];
+
+                    for (final jugador in [
+                      ...jugadoresLocal,
+                      ...jugadoresVisitante,
+                    ]) {
+                      final cantidad = golesPorJugador[jugador.id] ?? 0;
+
+                      if (cantidad > 0) {
+                        goleadores.add({
+                          'jugadorId': jugador.id,
+                          'nombre': jugador.nombre,
+                          'equipoId': jugador.equipoId,
+                          'equipoNombre': jugador.equipoNombre,
+                          'goles': cantidad,
+                        });
+                      }
+                    }
+
                     Navigator.pop(dialogContext, {
                       'golesLocal': golesLocal,
                       'golesVisitante': golesVisitante,
                       'estado': estadoSeleccionado,
+                      'goleadores': goleadores,
                     });
                   },
                   child: const Text('Guardar'),
@@ -270,6 +480,10 @@ class _PartidosScreenState extends State<PartidosScreen> {
     golesLocalController.dispose();
     golesVisitanteController.dispose();
 
+    for (final controller in controlesGoles.values) {
+      controller.dispose();
+    }
+
     if (resultado == null || !mounted) return;
 
     try {
@@ -278,13 +492,16 @@ class _PartidosScreenState extends State<PartidosScreen> {
         golesLocal: resultado['golesLocal'] as int,
         golesVisitante: resultado['golesVisitante'] as int,
         estado: resultado['estado'] as String,
+        goleadores: List<Map<String, dynamic>>.from(
+          resultado['goleadores'] as List,
+        ),
       );
 
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Resultado actualizado correctamente.'),
+          content: Text('Resultado y goleadores actualizados correctamente.'),
           backgroundColor: Colors.green,
         ),
       );
