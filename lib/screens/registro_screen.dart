@@ -58,6 +58,10 @@ class _RegistroScreenState extends State<RegistroScreen> {
 
       if (!mounted) return;
 
+      Navigator.of(
+        context,
+      ).pop(); // Cerrar el diálogo de carga si está abierto.
+
       // Firebase detectará la sesión y main.dart abrirá la aplicación.
     } on FirebaseAuthException catch (e) {
       String mensaje;
