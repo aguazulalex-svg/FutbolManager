@@ -26,6 +26,51 @@ class AuthService {
   // Escuchar cambios de sesión.
   Stream<User?> get cambiosSesion => _auth.authStateChanges();
 
+  // Registrar una cuenta con correo y contraseña.
+  Future<UserCredential> registrarConCorreo({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      return await _auth.createUserWithEmailAndPassword(
+        email: email.trim(),
+        password: password,
+      );
+    } on FirebaseAuthException {
+      rethrow;
+    } catch (e) {
+      throw Exception('No fue posible registrar la cuenta: $e');
+    }
+  }
+
+  // Iniciar sesión con correo y contraseña.
+  Future<UserCredential> iniciarSesionConCorreo({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      return await _auth.signInWithEmailAndPassword(
+        email: email.trim(),
+        password: password,
+      );
+    } on FirebaseAuthException {
+      rethrow;
+    } catch (e) {
+      throw Exception('No fue posible iniciar sesión: $e');
+    }
+  }
+
+  // Recuperar la contraseña por correo electrónico.
+  Future<void> recuperarContrasena({required String email}) async {
+    try {
+      await _auth.sendPasswordResetEmail(email: email.trim());
+    } on FirebaseAuthException {
+      rethrow;
+    } catch (e) {
+      throw Exception('No fue posible enviar el correo de recuperación: $e');
+    }
+  }
+
   // Iniciar sesión con Google.
   Future<UserCredential> iniciarSesionGoogle() async {
     try {
