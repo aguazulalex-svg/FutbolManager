@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/equipo.dart';
 import '../models/partido.dart';
@@ -110,18 +111,18 @@ class _PartidosScreenState extends State<PartidosScreen> {
     } catch (e) {
       if (!mounted) return;
 
+      final mensaje = e is FirebaseException && e.code == 'permission-denied'
+          ? '🔒 Acceso restringido. Solo el administrador puede programar partidos.'
+          : 'Error al registrar el partido. Inténtalo nuevamente.';
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error al registrar el partido: $e'),
-          backgroundColor: Colors.red,
+          content: Text(mensaje),
+          backgroundColor: Colors.red.shade700,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 4),
         ),
       );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _guardando = false;
-        });
-      }
     }
   }
 
@@ -149,17 +150,20 @@ class _PartidosScreenState extends State<PartidosScreen> {
           .obtenerJugadoresPorEquipo(partido.equipoVisitanteId)
           .first;
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('No se pudieron cargar los jugadores: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-      golesLocalController.dispose();
-      golesVisitanteController.dispose();
-      return;
+      if (!mounted) return;
+
+      final mensaje = e is FirebaseException && e.code == 'permission-denied'
+          ? '🔒 Solo el administrador puede registrar o modificar resultados.'
+          : 'Error al actualizar el resultado. Inténtalo nuevamente.';
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(mensaje),
+          backgroundColor: Colors.red.shade700,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 4),
+        ),
+      );
     }
 
     // Guardamos los goles de cada jugador por su ID.
@@ -555,8 +559,17 @@ class _PartidosScreenState extends State<PartidosScreen> {
     } catch (e) {
       if (!mounted) return;
 
+      final mensaje = e is FirebaseException && e.code == 'permission-denied'
+          ? '🔒 No tienes permisos para eliminar partidos. Contacta al administrador.'
+          : 'No se pudo eliminar el partido. Inténtalo nuevamente.';
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al eliminar el partido: $e')),
+        SnackBar(
+          content: Text(mensaje),
+          backgroundColor: Colors.red.shade700,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 4),
+        ),
       );
     }
   }

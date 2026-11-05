@@ -211,13 +211,25 @@ class _RegistroScreenState extends State<RegistroScreen> {
                         ),
                       ),
                     ),
-                    validator: (valor) {
-                      if (valor == null || valor.isEmpty) {
-                        return 'Crea una contraseña.';
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Ingresa una contraseña';
                       }
 
-                      if (valor.length < 6) {
-                        return 'Usa al menos 6 caracteres.';
+                      if (value.length < 8) {
+                        return 'La contraseña debe tener al menos 8 caracteres';
+                      }
+
+                      if (!RegExp(r'[A-Z]').hasMatch(value)) {
+                        return 'Debe contener al menos una letra mayúscula';
+                      }
+
+                      if (!RegExp(r'[0-9]').hasMatch(value)) {
+                        return 'Debe contener al menos un número';
+                      }
+
+                      if (!RegExp(r'[^A-Za-z0-9\s]').hasMatch(value)) {
+                        return 'Debe contener al menos un símbolo especial';
                       }
 
                       return null;
